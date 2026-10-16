@@ -1,0 +1,1 @@
+# modelo-confiabilidad-centrales
