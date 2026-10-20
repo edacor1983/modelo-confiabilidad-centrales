@@ -1642,14 +1642,19 @@ function poissonPanel(name){
   const rec=arr[k];note.innerHTML=`P90 = <strong>${p.p90} fallas</strong>; P95 = <strong>${p.p95} fallas</strong>. Para ${k} fallas: P(N≤${k}) = <strong>${pct(rec.cum)}</strong>; P(N>${k}) = <strong>${pct(1-rec.cum)}</strong>.`;
  }
 }
+document.addEventListener('change',function(e){if(e.target&&e.target.matches('[data-pc="unit-curve-choice"]')){state.unitCurveChoice=e.target.value;unitsPanel();}});
 function unitsPanel(){
  const d=source(mission('unit')),controls=get('pc-unit-controls'),plot=get('pc-unit-plot'),note=get('pc-unit-note');if(!controls||!plot)return;
  controls.innerHTML=missionControl('unit')+`<span class="pc-missionlabel">Misión ${mission('unit')} · ${d?format(d.t):'—'} h</span>`+switcher('unit',state.unit,[['curve','Confiabilidad R(t)'],['compare','Comparación de unidades']]);
  const units=(d?.units||[]).filter(u=>Number.isFinite(u.lambda)&&u.lambda>=0);
+ const unitChoice=state.unitCurveChoice??'all';
  if(!units.length){plot.innerHTML='<div class="pc-empty">Sin tasas de falla válidas.</div>';note.textContent='';return}
  if(state.unit==='curve'){
+  const selected=unitChoice==='all'?units:units.filter(u=>u.name===unitChoice);
+  const selectOptions='<option value="all"'+(unitChoice==='all'?' selected':'')+'>Todas las unidades</option>'+units.map(u=>'<option value="'+escapeHTML(u.name)+'"'+(unitChoice===u.name?' selected':'')+'>'+escapeHTML(u.name)+'</option>').join('');
+  controls.insertAdjacentHTML('beforeend','<label class="pc-missionpicker">Graficar unidad<select data-pc="unit-curve-choice">'+selectOptions+'</select></label>');
   const horizon=Math.max(d.t*1.5,1),count=65;
-  const series=units.map(u=>({name:u.name,data:Array.from({length:count},(_,i)=>{const t=horizon*i/(count-1);return[t,100*Math.exp(-u.lambda*t)]})}));
+  const series=selected.map(u=>({name:u.name,data:Array.from({length:count},(_,i)=>{const t=horizon*i/(count-1);return[t,100*Math.exp(-u.lambda*t)]})}));
   plot.innerHTML=plotSVG(series,{xlabel:'Tiempo de misión (horas)',markers:[{x:d.t,label:`Misión ${mission('unit')}: ${format(d.t)} h`}]});
   note.textContent='Confiabilidad R(t) = exp(−λt). Las curvas utilizan la tasa de fallas de cada unidad y el tiempo seleccionado.';
  }else{
